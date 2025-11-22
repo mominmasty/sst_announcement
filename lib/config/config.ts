@@ -30,6 +30,5 @@ export function getConfig(): RuntimeConfig {
     backendUrl: env.BACKEND_URL || defaults.backendUrl,
   };
 
-  console.log('📋 Config loaded:', config);
   return config;
 }

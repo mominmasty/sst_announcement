@@ -27,6 +27,5 @@ export function getConfig(): RuntimeConfig {
     backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || defaults.backendUrl,
   }
 
-  console.log('📋 Config loaded:', config)
   return config
 }

@@ -71,16 +71,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   const canDoAdminActions = canPerformAdminActions(derivedRole);
   
   
-  // DEBUG: Log current user role and admin status
-  console.log('👤 Current User Info:', {
-    email: user?.email,
-    role: user?.role,
-    is_admin: user?.is_admin,
-    derivedRole,
-    isSuperAdmin,
-    canManageOtherUsers,
-    canDoAdminActions
-  });
   
   // Filter and prioritize announcements based on user role
   const visibleAnnouncements = announcements.filter(a => 
@@ -92,15 +82,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
       user?.role === 'super_admin'
     )
   );
-  
-  // DEBUG: Log announcement filtering results
-  console.log('📢 Announcement Filtering:', {
-    totalAnnouncements: announcements.length,
-    visibleAnnouncements: visibleAnnouncements.length,
-    scheduledCount: announcements.filter(a => a.status === 'scheduled').length,
-    scheduledVisible: visibleAnnouncements.filter(a => a.status === 'scheduled').length,
-    allStatuses: announcements.map(a => ({ title: a.title, status: a.status, scheduled_at: a.scheduled_at }))
-  });
 
   const filteredByRole = filterAnnouncementsByRole(visibleAnnouncements, derivedRole);
   const prioritizedAnnouncements = sortAnnouncementsByPriority(filteredByRole, derivedRole);

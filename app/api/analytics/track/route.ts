@@ -10,7 +10,6 @@ export async function POST(request: NextRequest) {
 
     // For now, just return success without actually tracking
     // In a real implementation, you would save this to a database
-    console.log(`Tracking ${event_type} for announcement ${announcement_id}`);
 
     return NextResponse.json({
       success: true,
