@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { applyRateLimit, adminLimiterOptions } from '@/lib/middleware/rateLimit';
 import { requireAuth, requireAdmin } from '@/lib/middleware/auth';
 import { requireAllowedDomain } from '@/lib/middleware/domain';
+import { getDb } from '@/lib/config/db';
+import { announcements, clickTracking } from '@/lib/schema';
+import { sql, count, eq } from 'drizzle-orm';
+import { getSpooStats } from '@/lib/services/spoo';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,18 +14,57 @@ export async function GET(request: NextRequest) {
     requireAllowedDomain(user);
     requireAdmin(user);
 
-    // Mock analytics data for now
-    const stats = {
-      total_announcements: 0,
-      total_views: 0,
-      total_users: 0,
-      active_users: 0,
-      top_announcements: []
-    };
+    const db = getDb();
+
+    // Get total announcements
+    const totalAnnouncementsResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(announcements);
+    const total_announcements = totalAnnouncementsResult[0]?.count || 0;
+
+    // Get total users (from click tracking - unique users who clicked)
+    const totalUsersResult = await db
+      .select({ count: sql<number>`count(distinct user_id)` })
+      .from(clickTracking);
+    const total_users = totalUsersResult[0]?.count || 0;
+
+    // Get active users (users who clicked in the last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const activeUsersResult = await db
+      .select({ count: sql<number>`count(distinct user_id)` })
+      .from(clickTracking)
+      .where(sql`${clickTracking.createdAt} >= ${thirtyDaysAgo}`);
+    const active_users = activeUsersResult[0]?.count || 0;
+
+    // Get top announcements by unique clicks
+    const topAnnouncementsResult = await db
+      .select({
+        id: announcements.id,
+        title: announcements.title,
+        uniqueClicks: sql<number>`count(distinct ${clickTracking.userId})`,
+      })
+      .from(announcements)
+      .leftJoin(clickTracking, eq(announcements.id, clickTracking.announcementId))
+      .groupBy(announcements.id, announcements.title)
+      .orderBy(sql`count(distinct ${clickTracking.userId}) desc`)
+      .limit(10);
+
+    const top_announcements = topAnnouncementsResult.map(row => ({
+      id: row.id,
+      title: row.title,
+      views: row.uniqueClicks, // Using unique clicks as "views" for compatibility
+    }));
 
     return NextResponse.json({
       success: true,
-      data: stats,
+      data: {
+        total_announcements,
+        total_views: 0, // Keeping for compatibility, could be total clicks from Spoo.me
+        total_users,
+        active_users,
+        top_announcements,
+      },
     });
 
   } catch (error: any) {

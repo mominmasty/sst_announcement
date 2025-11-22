@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { Button } from '../ui/button';
+import { apiService } from '@/services/api';
 import type { AnalyticsStats } from '../../types';
 
 interface AnalyticsModalProps {
@@ -10,28 +11,69 @@ interface AnalyticsModalProps {
   loading?: boolean;
 }
 
+interface SpooStats {
+  announcementId: number;
+  title: string;
+  total_clicks: number;
+  message?: string;
+}
+
 const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   isOpen,
   onClose,
   stats,
   loading = false,
 }) => {
-  if (!isOpen) return null;
-
+  const [spooStats, setSpooStats] = useState<SpooStats[]>([]);
+  const [spooLoading, setSpooLoading] = useState(false);
   const [search, setSearch] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  if (!isOpen) return null;
 
   const filteredAnnouncements = (stats?.top_announcements ?? []).filter((announcement) => {
     const matchesTitle = announcement.title.toLowerCase().includes(search.toLowerCase());
     return matchesTitle;
   }).sort((a, b) => sortOrder === 'desc' ? b.views - a.views : a.views - b.views);
 
+  const fetchSpooStats = async () => {
+    if (!stats?.top_announcements?.length) return;
+
+    setSpooLoading(true);
+    try {
+      const spooPromises = stats.top_announcements.map(async (announcement) => {
+        try {
+          const response = await apiService.getSpooStats(announcement.id);
+          if (response.success && response.data) {
+            return response.data;
+          }
+        } catch (error) {
+          console.error(`Error fetching Spoo stats for announcement ${announcement.id}:`, error);
+        }
+        return null;
+      });
+
+      const results = await Promise.all(spooPromises);
+      const validResults = results.filter((result): result is SpooStats => result !== null);
+      setSpooStats(validResults);
+    } catch (error) {
+      console.error('Error fetching Spoo.me stats:', error);
+    } finally {
+      setSpooLoading(false);
+    }
+  };
+
+  const getSpooClicksForAnnouncement = (announcementId: number) => {
+    const spooStat = spooStats.find(stat => stat.announcementId === announcementId);
+    return spooStat?.total_clicks || 0;
+  };
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-black rounded-2xl border border-gray-900 shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto custom-scrollbar-analytics m-4 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+      <div className="bg-black rounded-2xl border border-gray-900 shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-y-auto custom-scrollbar-analytics m-4 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         <div className="p-6 border-b border-gray-900 bg-black flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white/10">
@@ -68,7 +110,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
             </div>
           ) : stats ? (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-black/70 rounded-xl p-6 border border-gray-800 ring-1 ring-white/5 shadow-sm hover:border-gray-700 hover:bg-gray-900/40 transition-colors">
                   <div className="text-4xl font-extrabold tracking-tight text-blue-400 mb-2">
                     {stats.total_announcements}
@@ -79,40 +121,56 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                   <div className="text-4xl font-extrabold tracking-tight text-emerald-400 mb-2">
                     {stats.total_users}
                   </div>
-                  <div className="text-sm text-gray-400">Total Users</div>
+                  <div className="text-sm text-gray-400">Unique Click Users</div>
                 </div>
                 <div className="bg-black/70 rounded-xl p-6 border border-gray-800 ring-1 ring-white/5 shadow-sm hover:border-gray-700 hover:bg-gray-900/40 transition-colors">
                   <div className="text-4xl font-extrabold tracking-tight text-cyan-400 mb-2">
                     {stats.active_users}
                   </div>
-                  <div className="text-sm text-gray-400">Active Users</div>
+                  <div className="text-sm text-gray-400">Active Users (30d)</div>
+                </div>
+                <div className="bg-black/70 rounded-xl p-6 border border-gray-800 ring-1 ring-white/5 shadow-sm hover:border-gray-700 hover:bg-gray-900/40 transition-colors">
+                  <div className="text-4xl font-extrabold tracking-tight text-purple-400 mb-2">
+                    {filteredAnnouncements.reduce((sum, ann) => sum + getSpooClicksForAnnouncement(ann.id), 0)}
+                  </div>
+                  <div className="text-sm text-gray-400">Total Spoo.me Clicks</div>
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2">Top Announcements</h3>
-                <p className="text-sm text-gray-500 mb-4">Search and sort by views to explore performance.</p>
-                <div className="flex flex-col md:flex-row gap-3 mb-4">
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by title..."
-                    className="w-full md:flex-1 px-4 py-2.5 bg-black/70 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600/40 focus:border-blue-600/40"
-                  />
-                
-                  <select
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
-                    className="w-full md:w-40 px-4 py-2.5 bg-black/70 border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-600/40 focus:border-purple-600/40"
-                  >
-                    <option value="desc" className="bg-black">DESC</option>
-                    <option value="asc" className="bg-black">ASC</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  {filteredAnnouncements.length > 0 ? (
-                    filteredAnnouncements.map((announcement, index) => (
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white mb-2">Top Announcements by Unique Clicks</h3>
+                <Button
+                  onClick={fetchSpooStats}
+                  disabled={spooLoading}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50"
+                >
+                  {spooLoading ? 'Loading Spoo.me Stats...' : 'Load Spoo.me Stats'}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">Search and sort by unique clicks to explore performance.</p>
+              <div className="flex flex-col md:flex-row gap-3 mb-4">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by title..."
+                  className="w-full md:flex-1 px-4 py-2.5 bg-black/70 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600/40 focus:border-blue-600/40"
+                />
+              
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+                  className="w-full md:w-40 px-4 py-2.5 bg-black/70 border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-600/40 focus:border-purple-600/40"
+                >
+                  <option value="desc" className="bg-black">DESC</option>
+                  <option value="asc" className="bg-black">ASC</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                {filteredAnnouncements.length > 0 ? (
+                  filteredAnnouncements.map((announcement, index) => {
+                    const spooClicks = getSpooClicksForAnnouncement(announcement.id);
+                    return (
                       <div
                         key={announcement.id}
                         className="bg-black/70 rounded-lg p-4 border border-gray-800 flex items-center justify-between hover:bg-gray-900/40 hover:border-gray-700 transition-colors"
@@ -123,15 +181,30 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                           </div>
                           <div>
                             <div className="text-white font-medium">{announcement.title}</div>
-                            <div className="text-sm text-gray-400">{announcement.views} views</div>
+                            <div className="text-sm text-gray-400">
+                              {announcement.views} unique clicks
+                              {spooClicks > 0 && ` • ${spooClicks} total clicks (Spoo.me)`}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <div className="text-white font-semibold">{announcement.views}</div>
+                            <div className="text-xs text-gray-500">Unique</div>
+                          </div>
+                          {spooClicks > 0 && (
+                            <div className="text-right">
+                              <div className="text-purple-400 font-semibold">{spooClicks}</div>
+                              <div className="text-xs text-gray-500">Total</div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-gray-400 text-center py-4">No results</div>
-                  )}
-                </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-gray-400 text-center py-4">No results</div>
+                )}
               </div>
             </div>
           ) : (

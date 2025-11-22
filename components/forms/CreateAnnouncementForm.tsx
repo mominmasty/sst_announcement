@@ -23,7 +23,8 @@ const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose
     is_active: true,
     status: 'active',
     send_email: false,
-    is_emergency: false
+    is_emergency: false,
+    link: ''
   })
 
   const categories = [
@@ -125,6 +126,21 @@ const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose
                 className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
                 required
               />
+            </div>
+
+            {/* Link */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-300 mb-2">
+                Link (Optional)
+              </label>
+              <input
+                type="url"
+                value={formData.link}
+                onChange={(e) => handleInputChange('link', e.target.value)}
+                placeholder="https://example.com"
+                className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              />
+              <p className="text-xs text-gray-500 mt-1">If provided, users will be redirected through our tracking system</p>
             </div>
 
             {/* Category */}

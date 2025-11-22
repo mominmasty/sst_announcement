@@ -9,6 +9,7 @@ import { getDb, getPool } from '@/lib/config/db';
 import { announcements } from '@/lib/schema';
 import { getAllUsers } from '@/lib/data/users';
 import { sendAnnouncementEmail } from '@/lib/services/email';
+import { shortenUrl } from '@/lib/services/spoo';
 import { eq, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
       status = 'active',
       send_email = false,
       send_tv = false,
+      link,
     } = body;
 
     const db = getDb();
@@ -86,6 +88,24 @@ export async function POST(request: NextRequest) {
     const finalStatus = hasPriorityWindow ? 'urgent' : isScheduled ? 'scheduled' : status;
     const finalIsActive = isScheduled ? false : hasPriorityWindow ? true : is_active;
 
+    let spooShortCode: string | undefined;
+
+    // Shorten URL with Spoo.me if link is provided
+    if (link && link.trim()) {
+      try {
+        const spooResult = await shortenUrl(link.trim());
+        if (spooResult.success && spooResult.short_code) {
+          spooShortCode = spooResult.short_code;
+        } else {
+          console.warn('Failed to shorten URL with Spoo.me:', spooResult.error);
+          // Continue without Spoo.me shortening - announcement can still be created
+        }
+      } catch (error) {
+        console.error('Error shortening URL with Spoo.me:', error);
+        // Continue without Spoo.me shortening
+      }
+    }
+
     const announcementValues: any = {
       title,
       description,
@@ -99,6 +119,8 @@ export async function POST(request: NextRequest) {
       sendEmail: send_email,
       emailSent: false,
       sendTV: send_tv,
+      link: link && link.trim() ? link.trim() : null,
+      spooShortCode,
     };
     if (prioritySupported) {
       announcementValues.priorityUntil = priorityUntilDate;
@@ -308,8 +330,10 @@ async function insertAnnouncementWithFallback(
           status,
           send_email,
           email_sent,
-          send_tv
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          send_tv,
+          link,
+          spoo_short_code
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
       `,
       values: [
@@ -325,6 +349,8 @@ async function insertAnnouncementWithFallback(
         values.sendEmail ?? false,
         values.emailSent ?? false,
         values.sendTV ?? false,
+        values.link ?? null,
+        values.spooShortCode ?? null,
       ],
     });
     
@@ -351,8 +377,10 @@ async function insertAnnouncementWithFallback(
             status,
             send_email,
             email_sent,
-            send_tv
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            send_tv,
+            link,
+            spoo_short_code
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
           RETURNING *
         `,
         values: [
@@ -368,6 +396,8 @@ async function insertAnnouncementWithFallback(
           values.sendEmail ?? false,
           values.emailSent ?? false,
           values.sendTV ?? false,
+          values.link ?? null,
+          values.spooShortCode ?? null,
         ],
       });
       
@@ -420,5 +450,7 @@ function mapRowToAnnouncement(row: any): typeof announcements.$inferSelect {
     emailSent: row.email_sent ?? false,
     sendTV: row.send_tv ?? false,
     priorityUntil: null, // Not supported in manual insert fallback
+    link: row.link,
+    spooShortCode: row.spoo_short_code,
   } as typeof announcements.$inferSelect;
 }

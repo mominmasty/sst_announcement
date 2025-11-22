@@ -144,6 +144,10 @@ class ApiService {
     return this.request<AnalyticsStats>('/api/analytics/stats')
   }
 
+  async getSpooStats(announcementId: number): Promise<ApiResponse<any>> {
+    return this.request<any>(`/api/analytics/spoo-stats?announcementId=${announcementId}`)
+  }
+
   // Admin utilities
   async getAdminLimits(): Promise<ApiResponse<AdminLimits>> {
     return this.request<AdminLimits>('/api/admin/limits')

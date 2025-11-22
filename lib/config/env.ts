@@ -15,6 +15,7 @@ const optionalEnvVars = [
   'RESEND_FROM_EMAIL',
   'DEPLOYMENT',
   'CRON_SECRET',
+  'SPOO_ME_API_KEY',
 ];
 
 let validated = false;
@@ -33,6 +34,7 @@ export interface EnvConfig {
   RESEND_FROM_EMAIL?: string;
   DEPLOYMENT?: string;
   CRON_SECRET?: string;
+  SPOO_ME_API_KEY?: string;
 }
 
 export function validateEnv(): EnvConfig {
@@ -74,6 +76,7 @@ export function getEnvConfig(): EnvConfig {
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     DEPLOYMENT: process.env.DEPLOYMENT,
     CRON_SECRET: process.env.CRON_SECRET,
+    SPOO_ME_API_KEY: process.env.SPOO_ME_API_KEY,
   };
 }
 

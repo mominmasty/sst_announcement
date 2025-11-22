@@ -57,8 +57,16 @@ export function validateAnnouncement(data: any): ValidationErrorItem[] {
     errors.push({ field: 'emergency_expires_at', message: 'Emergency expiration time must be a valid date' });
   }
 
-  if (data.is_active !== undefined && typeof data.is_active !== 'boolean') {
-    errors.push({ field: 'is_active', message: 'is_active must be a boolean' });
+  if (data.link && typeof data.link !== 'string') {
+    errors.push({ field: 'link', message: 'Link must be a string' });
+  }
+
+  if (data.link && data.link.trim().length > 0) {
+    try {
+      new URL(data.link);
+    } catch {
+      errors.push({ field: 'link', message: 'Link must be a valid URL' });
+    }
   }
 
   if (data.status && typeof data.status !== 'string') {

@@ -21,6 +21,8 @@ export interface Announcement {
   is_emergency?: boolean
   emergency_expires_at?: string | null
   visible_after?: string | null
+  link?: string
+  spoo_short_code?: string
 }
 
 export interface User {
@@ -48,6 +50,7 @@ export interface CreateAnnouncementData {
   priority_until?: string | null
   is_emergency?: boolean
   emergency_expires_at?: string // ISO string for emergency expiration time
+  link?: string
 }
 
 export interface ReviewAction {

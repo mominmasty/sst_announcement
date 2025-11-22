@@ -45,6 +45,8 @@ export const announcements = pgTable('announcements', {
   isEmergency: boolean('is_emergency').default(false).notNull(),
   emergencyExpiresAt: timestamp('emergency_expires_at', { withTimezone: true }),
   visibleAfter: timestamp('visible_after', { withTimezone: true }),
+  link: text('link'),
+  spooShortCode: varchar('spoo_short_code', { length: 50 }),
 });
 
 export const announcementEngagements = pgTable('announcement_engagements', {
@@ -52,6 +54,13 @@ export const announcementEngagements = pgTable('announcement_engagements', {
   announcementId: integer('announcement_id').notNull().references(() => announcements.id, { onDelete: 'cascade' }),
   userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
   eventType: text('event_type').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const clickTracking = pgTable('click_tracking', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  announcementId: integer('announcement_id').notNull().references(() => announcements.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -80,6 +89,17 @@ export const announcementEngagementsRelations = relations(announcementEngagement
   }),
 }));
 
+export const clickTrackingRelations = relations(clickTracking, ({ one }) => ({
+  announcement: one(announcements, {
+    fields: [clickTracking.announcementId],
+    references: [announcements.id],
+  }),
+  user: one(users, {
+    fields: [clickTracking.userId],
+    references: [users.id],
+  }),
+}));
+
 // Type exports for TypeScript
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -87,3 +107,5 @@ export type Announcement = typeof announcements.$inferSelect;
 export type NewAnnouncement = typeof announcements.$inferInsert;
 export type AnnouncementEngagement = typeof announcementEngagements.$inferSelect;
 export type NewAnnouncementEngagement = typeof announcementEngagements.$inferInsert;
+export type ClickTracking = typeof clickTracking.$inferSelect;
+export type NewClickTracking = typeof clickTracking.$inferInsert;

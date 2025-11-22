@@ -678,6 +678,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                              {a.link && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-10 w-10 p-0 text-green-400 hover:text-green-300 hover:bg-green-500/20 rounded-xl transition-all duration-200"
+                                  onClick={() => window.open(`/api/redirect-announcement?announcementId=${a.id}`, '_blank')}
+                                  title="Open Link"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
