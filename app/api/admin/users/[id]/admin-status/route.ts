@@ -24,7 +24,7 @@ export async function PATCH(
     await applyRateLimit(request, adminLimiterOptions);
     const user = await requireAuth(request, { enforceDomain: true });
     requireAllowedDomain(user);
-    requireSuperAdmin(user); // Only super admins can change admin status
+    requireSuperAdmin(user); 
 
     const { id: idParam } = await params;
     const id = parseId(idParam);
@@ -57,15 +57,4 @@ export async function PATCH(
       { status: error.status || 500 }
     );
   }
-}
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'PATCH, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
 }

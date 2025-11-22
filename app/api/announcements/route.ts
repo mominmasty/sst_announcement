@@ -155,17 +155,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
-}
-
 // Helper functions (same as original)
 type PriorityColumnState = 'unknown' | 'supported' | 'unsupported';
 let priorityColumnState: PriorityColumnState = 'unknown';

@@ -61,3 +61,4 @@ export const getCategoryIcon = (category: string) => {
       )
   }
 }
+
