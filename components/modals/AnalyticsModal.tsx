@@ -26,6 +26,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
 }) => {
   const [spooStats, setSpooStats] = useState<SpooStats[]>([]);
   const [spooLoading, setSpooLoading] = useState(false);
+  const [spooStatsLoaded, setSpooStatsLoaded] = useState(false);
   const [search, setSearch] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
@@ -49,6 +50,13 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
           }
         } catch (error) {
           console.error(`Error fetching Spoo stats for announcement ${announcement.id}:`, error);
+          // Return a default object for failed requests
+          return {
+            announcementId: announcement.id,
+            title: announcement.title,
+            total_clicks: 0,
+            message: 'Failed to load Spoo.me stats'
+          };
         }
         return null;
       });
@@ -56,8 +64,10 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
       const results = await Promise.all(spooPromises);
       const validResults = results.filter((result): result is SpooStats => result !== null);
       setSpooStats(validResults);
+      setSpooStatsLoaded(true);
     } catch (error) {
       console.error('Error fetching Spoo.me stats:', error);
+      setSpooStatsLoaded(true); // Mark as loaded even on error
     } finally {
       setSpooLoading(false);
     }
@@ -65,7 +75,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
 
   const getSpooClicksForAnnouncement = (announcementId: number) => {
     const spooStat = spooStats.find(stat => stat.announcementId === announcementId);
-    return spooStat?.total_clicks || 0;
+    return spooStat ? { clicks: spooStat.total_clicks, message: spooStat.message } : null;
   };
 
   return (
@@ -131,9 +141,12 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                 </div>
                 <div className="bg-black/70 rounded-xl p-6 border border-gray-800 ring-1 ring-white/5 shadow-sm hover:border-gray-700 hover:bg-gray-900/40 transition-colors">
                   <div className="text-4xl font-extrabold tracking-tight text-purple-400 mb-2">
-                    {filteredAnnouncements.reduce((sum, ann) => sum + getSpooClicksForAnnouncement(ann.id), 0)}
+                    {spooStatsLoaded ? spooStats.reduce((sum, stat) => sum + (stat.total_clicks || 0), 0) : 0}
                   </div>
                   <div className="text-sm text-gray-400">Total Spoo.me Clicks</div>
+                  {!spooStatsLoaded && (
+                    <div className="text-xs text-gray-500 mt-1">Click "Load Spoo.me Stats" to fetch</div>
+                  )}
                 </div>
               </div>
 
@@ -144,7 +157,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                   disabled={spooLoading}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50"
                 >
-                  {spooLoading ? 'Loading Spoo.me Stats...' : 'Load Spoo.me Stats'}
+                  {spooLoading ? 'Loading Spoo.me Stats...' : spooStatsLoaded ? 'Refresh Spoo.me Stats' : 'Load Spoo.me Stats'}
                 </Button>
               </div>
               <p className="text-sm text-gray-500 mb-4">Search and sort by unique clicks to explore performance.</p>
@@ -169,7 +182,9 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
               <div className="space-y-2">
                 {filteredAnnouncements.length > 0 ? (
                   filteredAnnouncements.map((announcement, index) => {
-                    const spooClicks = getSpooClicksForAnnouncement(announcement.id);
+                    const spooData = spooStatsLoaded ? spooStats.find(stat => stat.announcementId === announcement.id) : null;
+                    const spooClicks = spooData?.total_clicks || 0;
+                    const spooMessage = spooData?.message;
                     return (
                       <div
                         key={announcement.id}
@@ -182,20 +197,32 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                           <div>
                             <div className="text-white font-medium">{announcement.title}</div>
                             <div className="text-sm text-gray-400">
-                              {announcement.views} unique clicks
-                              {spooClicks > 0 && ` • ${spooClicks} total clicks (Spoo.me)`}
+                              {announcement.views} total clicks
+                              {announcement.uniqueClicks > 0 && ` • ${announcement.uniqueClicks} unique users`}
+                              {spooStatsLoaded && ` • ${spooClicks} Spoo.me clicks`}
                             </div>
+                            {spooMessage && (
+                              <div className="text-xs text-amber-400 mt-1 italic">
+                                {spooMessage}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="text-right">
                             <div className="text-white font-semibold">{announcement.views}</div>
-                            <div className="text-xs text-gray-500">Unique</div>
+                            <div className="text-xs text-gray-500">Total</div>
                           </div>
-                          {spooClicks > 0 && (
+                          {announcement.uniqueClicks > 0 && (
+                            <div className="text-right">
+                              <div className="text-blue-400 font-semibold">{announcement.uniqueClicks}</div>
+                              <div className="text-xs text-gray-500">Unique</div>
+                            </div>
+                          )}
+                          {spooStatsLoaded && (
                             <div className="text-right">
                               <div className="text-purple-400 font-semibold">{spooClicks}</div>
-                              <div className="text-xs text-gray-500">Total</div>
+                              <div className="text-xs text-gray-500">Spoo.me</div>
                             </div>
                           )}
                         </div>

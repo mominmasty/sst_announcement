@@ -93,9 +93,11 @@ export async function POST(request: NextRequest) {
     // Shorten URL with Spoo.me if link is provided
     if (link && link.trim()) {
       try {
+        console.log('Attempting to shorten URL with Spoo.me:', link.trim());
         const spooResult = await shortenUrl(link.trim());
         if (spooResult.success && spooResult.short_code) {
           spooShortCode = spooResult.short_code;
+          console.log('Successfully shortened URL:', spooShortCode);
         } else {
           console.warn('Failed to shorten URL with Spoo.me:', spooResult.error);
           // Continue without Spoo.me shortening - announcement can still be created

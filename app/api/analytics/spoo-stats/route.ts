@@ -71,9 +71,15 @@ export async function GET(request: NextRequest) {
         },
       });
     } else {
+      // Return with 0 clicks and the error message
       return NextResponse.json({
-        success: false,
-        error: spooStats.error || 'Failed to fetch Spoo.me stats',
+        success: true,
+        data: {
+          announcementId: Number(announcementId),
+          title: announcement[0].title,
+          total_clicks: 0,
+          message: spooStats.error || 'Spoo.me stats are currently unavailable',
+        },
       });
     }
 

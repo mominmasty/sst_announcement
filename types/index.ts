@@ -80,7 +80,7 @@ export interface AnalyticsStats {
   total_views: number
   total_users: number
   active_users: number
-  top_announcements: Array<{ id: number; title: string; views: number }>
+  top_announcements: Array<{ id: number; title: string; views: number; uniqueClicks?: number }>
 }
 
 export interface AdminDashboardData {

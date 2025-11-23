@@ -38,10 +38,10 @@ export async function shortenUrl(url: string): Promise<SpooShortenResponse> {
 
     const data = await response.json();
 
-    if (data.success && data.short_code) {
+    if (data.success !== false && data.alias) {
       return {
         success: true,
-        short_code: data.short_code,
+        short_code: data.alias,
       };
     } else {
       return {
@@ -65,30 +65,37 @@ export async function shortenUrl(url: string): Promise<SpooShortenResponse> {
  */
 export async function getSpooStats(shortCode: string): Promise<SpooStatsResponse> {
   try {
-    const response = await fetch(`https://spoo.me/api/v1/stats/${shortCode}`, {
+    // Use the correct Spoo.me API v1 endpoint for URL statistics
+    const statsUrl = `https://spoo.me/api/v1/stats?scope=anon&short_code=${encodeURIComponent(shortCode)}`;
+
+    const response = await fetch(statsUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${env.SPOO_ME_API_KEY}`,
+        'Accept': 'application/json',
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Spoo.me API error: ${response.status} ${response.statusText}`);
+    if (response.ok) {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+
+        // Parse the correct response structure from Spoo.me API v1
+        if (data && data.summary && typeof data.summary.total_clicks === 'number') {
+          return {
+            success: true,
+            total_clicks: data.summary.total_clicks,
+          };
+        }
+      }
     }
 
-    const data = await response.json();
-
-    if (data.success && typeof data.total_clicks === 'number') {
-      return {
-        success: true,
-        total_clicks: data.total_clicks,
-      };
-    } else {
-      return {
-        success: false,
-        error: data.error || 'Unknown error from Spoo.me API',
-      };
-    }
+    // If the API call fails or returns unexpected format, return a message
+    return {
+      success: false,
+      error: 'Spoo.me stats API is currently unavailable. Click tracking is handled internally.',
+    };
   } catch (error) {
     console.error('Error fetching Spoo.me stats:', error);
     return {

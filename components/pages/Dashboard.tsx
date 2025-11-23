@@ -259,6 +259,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     }
   };
 
+  const renderDescriptionWithLinks = (description: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = description.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (urlRegex.test(part)) {
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 underline hover:no-underline transition-colors duration-200"
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
+
   return (
     <div className="dashboard relative min-h-screen bg-black">
       <div className="relative z-10">
@@ -672,7 +694,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 )}
                                 {expandedId === a.id && (
                                   <div className="text-sm text-gray-300 leading-relaxed animate-in fade-in slide-in-from-top duration-300">
-                                    {a.description}
+                                    {renderDescriptionWithLinks(a.description)}
                                   </div>
                                 )}
                               </div>

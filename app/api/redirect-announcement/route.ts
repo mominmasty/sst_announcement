@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(`Redirect API called for announcement ${announcementId}`);
+
     const db = getDb();
 
     // Get the announcement to check if it exists and get the spoo_short_code
@@ -41,9 +43,9 @@ export async function GET(request: NextRequest) {
 
     const { spooShortCode, link } = announcement[0];
 
-    if (!spooShortCode) {
+    if (!spooShortCode && !link) {
       return NextResponse.json(
-        { success: false, error: 'No shortened URL available for this announcement' },
+        { success: false, error: 'No URL available for this announcement' },
         { status: 404 }
       );
     }
@@ -53,27 +55,32 @@ export async function GET(request: NextRequest) {
     try {
       const user = await requireAuth(request, { enforceDomain: false });
       userId = user.id;
+      console.log('Authenticated user for click tracking:', userId);
     } catch (error) {
-      // User not authenticated, continue without user tracking
-      console.log('User not authenticated for click tracking');
+      // User not authenticated, continue with anonymous tracking
+      console.log('Anonymous click tracking (user not authenticated)');
     }
 
-    // Log the click in our database
-    if (userId) {
-      try {
-        await db.insert(clickTracking).values({
-          userId,
-          announcementId: Number(announcementId),
-        });
-      } catch (error) {
-        console.error('Error logging click tracking:', error);
-        // Continue with redirect even if logging fails
-      }
+    // Log the click in our database (even for anonymous users)
+    try {
+      await db.insert(clickTracking).values({
+        userId: userId || null, // Allow null for anonymous clicks
+        announcementId: Number(announcementId),
+      });
+      console.log(`Click tracked for announcement ${announcementId}, user: ${userId || 'anonymous'}`);
+    } catch (error) {
+      console.error('Error logging click tracking:', error);
+      // Continue with redirect even if logging fails
     }
 
-    // Redirect to Spoo.me URL
-    const spooUrl = `https://spoo.me/${spooShortCode}`;
-    return NextResponse.redirect(spooUrl, { status: 307 });
+    // Redirect to Spoo.me URL if available, otherwise redirect to original link
+    if (spooShortCode) {
+      const spooUrl = `https://spoo.me/${spooShortCode}`;
+      return NextResponse.redirect(spooUrl, { status: 307 });
+    } else {
+      // Fallback to original link if no Spoo.me short code
+      return NextResponse.redirect(link!, { status: 307 });
+    }
 
   } catch (error: any) {
     console.error('Error in redirect-announcement:', error);
