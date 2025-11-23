@@ -21,6 +21,9 @@ export function getPool(): Pool {
   const pool = new Pool({
     connectionString: env.DATABASE_URL,
     ssl: env.DATABASE_URL?.includes('localhost') ? undefined : { rejectUnauthorized: false },
+    max: 10, // Limit pool size
+    idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+    connectionTimeoutMillis: 5000, // Return an error after 5 seconds if connection could not be established
   });
 
   globalForDb.pool = pool;
